@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.antigravity.whatsappbot.databinding.ActivityMainBinding
 import java.util.Locale
 
@@ -47,11 +48,7 @@ class MainActivity : AppCompatActivity() {
         checkNotificationPermission()
 
         val filter = IntentFilter(WhatsAppNotificationListener.ACTION_NEW_LOG)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(logReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(logReceiver, filter)
-        }
+        ContextCompat.registerReceiver(this, logReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     override fun onPause() {

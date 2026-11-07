@@ -21,9 +21,11 @@ jobs:
 
     - name: Configurar Gradle
       uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
 
     - name: Compilar APK Debug
-      run: chmod +x gradlew && ./gradlew assembleDebug --stacktrace
+      run: gradle assembleDebug --stacktrace --no-daemon
 
     - name: Subir APK como artefacto descargable
       uses: actions/upload-artifact@v4
