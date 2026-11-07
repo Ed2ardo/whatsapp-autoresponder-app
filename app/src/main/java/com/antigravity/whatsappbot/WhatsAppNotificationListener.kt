@@ -169,20 +169,27 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 if (scheduleManager.isOutsideSchedule()) {
                     responseText = scheduleManager.getOutOfOfficeMessage(cleanName)
                     modeUsed = "Fuera de Horario"
-                } else if (prefs.isAiMode && prefs.geminiApiKey.isNotBlank()) {
-                    try {
-                        broadcastLog("🤖 Consultando Gemini IA...")
-                        responseText = geminiManager.generateReply(cleanName, fullMessage)
-                        modeUsed = "Gemini IA"
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error Gemini: ${e.message}")
-                        broadcastLog("⚠️ Error IA (${e.message}). Usando regla local...")
-                        responseText = ruleEngine.evaluate(cleanName, fullMessage)
-                        modeUsed = "Regla Respaldo"
-                    }
                 } else {
-                    responseText = ruleEngine.evaluate(cleanName, fullMessage)
-                    modeUsed = "Regla Local"
+                    // Check custom dynamic rules (Option 3 / FAQ)
+                    val customMatch = ruleEngine.evaluateCustomRules(fullMessage, prefs.getCustomRules())
+                    if (customMatch != null) {
+                        responseText = customMatch
+                        modeUsed = "Regla Dinámica (FAQ)"
+                    } else if (prefs.isAiMode && prefs.geminiApiKey.isNotBlank()) {
+                        try {
+                            broadcastLog("🤖 Consultando Gemini IA con Contexto y Estados...")
+                            responseText = geminiManager.generateReply(cleanName, fullMessage)
+                            modeUsed = "Gemini IA"
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error Gemini: ${e.message}")
+                            broadcastLog("⚠️ Error IA (${e.message}). Usando regla local...")
+                            responseText = ruleEngine.evaluate(cleanName, fullMessage)
+                            modeUsed = "Regla Respaldo"
+                        }
+                    } else {
+                        responseText = ruleEngine.evaluate(cleanName, fullMessage)
+                        modeUsed = "Regla Local"
+                    }
                 }
 
                 if (responseText.isBlank()) return@launch

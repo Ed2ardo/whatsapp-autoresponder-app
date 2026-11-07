@@ -2,6 +2,40 @@ package com.antigravity.whatsappbot
 
 class RuleEngine {
 
+    /**
+     * Checks if incoming text matches any enabled custom user rule (Option 3 / FAQ).
+     * If matched, returns the exact answer configured by the user.
+     * Returns null if no custom rule matches.
+     */
+    fun evaluateCustomRules(incomingText: String, customRules: List<CustomRule>): String? {
+        val text = incomingText.trim().lowercase()
+
+        for (rule in customRules) {
+            if (!rule.enabled || rule.trigger.isBlank() || rule.response.isBlank()) continue
+
+            val triggers = rule.trigger.split("|", ",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
+            val matched = triggers.any { trigger ->
+                try {
+                    if (trigger.startsWith("^") || trigger.endsWith("$") || trigger.contains("\\b")) {
+                        Regex(trigger, RegexOption.IGNORE_CASE).containsMatchIn(text)
+                    } else {
+                        text.contains(trigger)
+                    }
+                } catch (e: Exception) {
+                    text.contains(trigger)
+                }
+            }
+
+            if (matched) {
+                return rule.response
+            }
+        }
+        return null
+    }
+
+    /**
+     * Base default conversation rules.
+     */
     fun evaluate(contactName: String, incomingText: String): String {
         val text = incomingText.trim().lowercase()
 
