@@ -138,6 +138,40 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                     return
                 }
             }
+
+            // Synchronize up to 12 previous messages from notification history so Gemini never loses context
+            val historyList = mutableListOf<ChatMessage>()
+            val count = messagesArray.size
+            val startIdx = Math.max(0, count - 12)
+            for (i in startIdx until count) {
+                val b = messagesArray[i] as? Bundle ?: continue
+                val text = b.getCharSequence("text")?.toString()?.trim() ?: continue
+                val senderPerson = b.getCharSequence("sender")?.toString()?.trim() ?: ""
+                val isSelfMsg = senderPerson.isEmpty() || senderPerson.equals("Tú", true) || senderPerson.equals("Yo", true)
+                val role = if (isSelfMsg) "model" else "user"
+                if (text.isNotBlank()) {
+                    historyList.add(ChatMessage(role, text))
+                }
+            }
+            if (historyList.isNotEmpty()) {
+                ConversationMemory.syncFromNotificationMessages(rawSender, historyList)
+            }
+        }
+
+        // Also check android.textLines if available for multi-line context
+        val textLines = extras.getCharSequenceArray("android.textLines")
+        if (textLines != null && textLines.isNotEmpty()) {
+            val linesHistory = mutableListOf<ChatMessage>()
+            val startIdx = Math.max(0, textLines.size - 12)
+            for (i in startIdx until textLines.size) {
+                val line = textLines[i]?.toString()?.trim() ?: continue
+                if (line.isNotBlank()) {
+                    linesHistory.add(ChatMessage("user", line))
+                }
+            }
+            if (linesHistory.isNotEmpty()) {
+                ConversationMemory.syncFromNotificationMessages(rawSender, linesHistory)
+            }
         }
 
         // Check if chat is in manual pause window (1 minute after Eduardo intervened)

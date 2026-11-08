@@ -103,7 +103,7 @@ class GeminiManager(private val prefs: AppPreferences) {
 
         // Generation Config
         val genConfig = JsonObject().apply {
-            addProperty("maxOutputTokens", 180)
+            addProperty("maxOutputTokens", 250)
             addProperty("temperature", 0.7)
         }
         payload.add("generationConfig", genConfig)
