@@ -2,6 +2,7 @@ package com.antigravity.whatsappbot
 
 import android.app.Notification
 import android.content.Intent
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -33,7 +34,8 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
     // Debounce window in ms: waits for the user to finish typing multiple lines
     private val DEBOUNCE_DELAY_MS = 6000L
-    private val MANUAL_PAUSE_DURATION_MS = 25 * 60 * 1000L // 25 minutes pause when user types
+    // Pause duration when user manually replies: 1 minute (60,000 ms)
+    private val MANUAL_PAUSE_DURATION_MS = 60 * 1000L
 
     companion object {
         const val ACTION_NEW_LOG = "com.antigravity.whatsappbot.NEW_LOG"
@@ -89,21 +91,60 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             return
         }
 
+        val cleanName = sanitizeName(rawSender)
+
         // 3. Detect Manual User Intervention (If Eduardo replied himself)
-        if (rawSender.equals("Tú", ignoreCase = true) || rawSender.equals("Yo", ignoreCase = true) ||
-            rawMessage.startsWith("Tú: ") || rawMessage.startsWith("Yo: ")) {
-            // Cancel any pending bot reply for active contacts
-            contactJobs.values.forEach { it.cancel() }
-            contactBuffers.clear()
-            broadcastLog("🛑 Detectada respuesta manual tuya en WhatsApp. Auto-respuesta en pausa temporal.")
+        val isManualSender = rawSender.equals("Tú", ignoreCase = true) || rawSender.equals("Yo", ignoreCase = true)
+        val isManualText = rawMessage.startsWith("Tú: ", ignoreCase = true) || rawMessage.startsWith("Yo: ", ignoreCase = true)
+
+        if (isManualSender || isManualText) {
+            val pauseUntil = System.currentTimeMillis() + MANUAL_PAUSE_DURATION_MS
+
+            if (!isManualSender) {
+                // Eduardo replied to this specific contact (rawSender = contact name, rawMessage = "Tú: ...")
+                manuallyPausedUntil[rawSender] = pauseUntil
+                contactJobs[rawSender]?.cancel()
+                contactJobs.remove(rawSender)
+                contactBuffers.remove(rawSender)
+                broadcastLog("🛑 Respondiste manualmente a $cleanName. Auto-respuesta cancelada y chat suspendido por 1 min.")
+            } else {
+                // Sender is "Tú", pause all currently active contacts
+                for (activeContact in contactBuffers.keys()) {
+                    manuallyPausedUntil[activeContact] = pauseUntil
+                    contactJobs[activeContact]?.cancel()
+                    contactJobs.remove(activeContact)
+                }
+                contactBuffers.clear()
+                broadcastLog("🛑 Detectada respuesta tuya en WhatsApp. Chats activos suspendidos por 1 min.")
+            }
             return
         }
 
-        // Check if chat is in manual pause window
+        // Also inspect MessagingStyle messages list to see if the latest message was sent by the user
+        val messagesArray = extras.getParcelableArray("android.messages")
+        if (messagesArray != null && messagesArray.isNotEmpty()) {
+            val lastMsgBundle = messagesArray.lastOrNull() as? Bundle
+            if (lastMsgBundle != null) {
+                val senderPerson = lastMsgBundle.getCharSequence("sender")?.toString()?.trim() ?: ""
+                val isSelf = senderPerson.isEmpty() ||
+                        senderPerson.equals("Tú", ignoreCase = true) ||
+                        senderPerson.equals("Yo", ignoreCase = true)
+                if (isSelf) {
+                    manuallyPausedUntil[rawSender] = System.currentTimeMillis() + MANUAL_PAUSE_DURATION_MS
+                    contactJobs[rawSender]?.cancel()
+                    contactJobs.remove(rawSender)
+                    contactBuffers.remove(rawSender)
+                    broadcastLog("🛑 Último mensaje en chat enviado por ti a $cleanName. Auto-respuesta cancelada y suspendida por 1 min.")
+                    return
+                }
+            }
+        }
+
+        // Check if chat is in manual pause window (1 minute after Eduardo intervened)
         val pauseUntil = manuallyPausedUntil[rawSender] ?: 0L
         if (System.currentTimeMillis() < pauseUntil) {
-            val remainingMins = Math.ceil((pauseUntil - System.currentTimeMillis()) / 60000.0).toInt()
-            broadcastLog("⏸️ Chat con $rawSender pausado ($remainingMins min restantes por intervención manual).")
+            val remainingSecs = Math.max(1, ((pauseUntil - System.currentTimeMillis()) / 1000).toInt())
+            broadcastLog("⏸️ Chat con $cleanName suspendido ($remainingSecs s restantes tras tu respuesta manual).")
             return
         }
 
@@ -127,7 +168,6 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             buffer.add(rawMessage.trim())
         }
 
-        val cleanName = sanitizeName(rawSender)
         broadcastLog("📥 De $cleanName: \"$rawMessage\" (Acumulando mensajes...)")
 
         // 7. Debounce Timer: Cancel previous pending reply and wait for user to finish typing
@@ -137,6 +177,13 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             try {
                 // Wait debounce window so the contact can send consecutive messages
                 delay(DEBOUNCE_DELAY_MS)
+
+                // Check again if user manually intervened during debounce
+                if (System.currentTimeMillis() < (manuallyPausedUntil[rawSender] ?: 0L)) {
+                    broadcastLog("🛑 Cancelando auto-respuesta a $cleanName: respondiste manualmente en WhatsApp.")
+                    contactBuffers.remove(rawSender)
+                    return@launch
+                }
 
                 // Check Cooldown
                 if (!antiBanEngine.canReply(rawSender)) {
@@ -199,6 +246,12 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 broadcastLog("⏱️ Simulando escritura (${delayMs / 1000.0}s) para $cleanName ($modeUsed)...")
                 delay(delayMs)
 
+                // Final safety check: if Eduardo replied while typing delay was running, abort!
+                if (System.currentTimeMillis() < (manuallyPausedUntil[rawSender] ?: 0L)) {
+                    broadcastLog("🛑 Envío a $cleanName abortado: detectada tu respuesta manual durante el retardo.")
+                    return@launch
+                }
+
                 // Dispatch single reply
                 val success = NotificationUtils.sendReply(applicationContext, action, responseText)
                 if (success) {
@@ -224,7 +277,6 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         val cleaned = fullName.replace(Regex("[^a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]"), "").trim()
         val tokens = cleaned.split("\\s+".toRegex()).filter { it.length >= 2 }
 
-        // Take only the first recognizable name, avoiding words like D1, Store, etc.
         val firstName = tokens.firstOrNull { !it.equals("d", ignoreCase = true) && !it.equals("tienda", ignoreCase = true) }
         return firstName?.replaceFirstChar { it.uppercase() } ?: "amigo(a)"
     }
