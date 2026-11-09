@@ -178,25 +178,25 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_copilot -> {
-                    showTab(copilot = true, rules = false, tester = false, settings = false)
+                    showTab(copilot = true)
                     true
                 }
                 R.id.nav_rules -> {
-                    showTab(copilot = false, rules = true, scheduled = false, tester = false, settings = false)
+                    showTab(rules = true)
                     renderCustomRules()
                     true
                 }
                 R.id.nav_scheduled -> {
-                    showTab(copilot = false, rules = false, scheduled = true, tester = false, settings = false)
+                    showTab(scheduled = true)
                     renderScheduledMessages()
                     true
                 }
                 R.id.nav_tester -> {
-                    showTab(copilot = false, rules = false, scheduled = false, tester = true, settings = false)
+                    showTab(tester = true)
                     true
                 }
                 R.id.nav_settings -> {
-                    showTab(copilot = false, rules = false, scheduled = false, tester = false, settings = true)
+                    showTab(settings = true)
                     updateSettingsUIFromPrefs()
                     true
                 }
@@ -205,7 +205,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showTab(copilot: Boolean, rules: Boolean, scheduled: Boolean, tester: Boolean, settings: Boolean) {
+    private fun showTab(
+        copilot: Boolean = false,
+        rules: Boolean = false,
+        scheduled: Boolean = false,
+        tester: Boolean = false,
+        settings: Boolean = false
+    ) {
         binding.layoutCopilotTab.visibility = if (copilot) View.VISIBLE else View.GONE
         binding.layoutRulesTab.visibility = if (rules) View.VISIBLE else View.GONE
         binding.layoutScheduledTab.visibility = if (scheduled) View.VISIBLE else View.GONE
