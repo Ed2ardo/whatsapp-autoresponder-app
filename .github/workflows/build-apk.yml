@@ -26,7 +26,17 @@ jobs:
         cache-disabled: true
 
     - name: Compilar APK Debug
-      run: gradle assembleDebug --stacktrace --no-daemon
+      run: |
+        chmod +x ./gradlew || true
+        ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee build_log.txt
+
+    - name: Diagnostico de error si falla
+      if: failure()
+      run: |
+        echo "### Resumen de Error en Compilación" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        tail -n 120 build_log.txt >> $GITHUB_STEP_SUMMARY || true
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
     - name: Subir APK como artefacto descargable
       uses: actions/upload-artifact@v4

@@ -274,8 +274,8 @@ class MainActivity : AppCompatActivity() {
                 radius = 36f
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
                 setContentPadding(36, 32, 36, 32)
-                strokeColor = ContextCompat.getColor(context, R.color.chip_border)
-                strokeWidth = 2
+                setStrokeColor(ContextCompat.getColor(context, R.color.chip_border))
+                setStrokeWidth(2)
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(12, 16, 12, 16)
                 }
@@ -438,8 +438,8 @@ class MainActivity : AppCompatActivity() {
                 radius = 32f
                 cardElevation = 2f
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
-                strokeColor = ContextCompat.getColor(context, R.color.chip_border)
-                strokeWidth = 1
+                setStrokeColor(ContextCompat.getColor(context, R.color.chip_border))
+                setStrokeWidth(1)
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(0, 0, 0, 14)
                 }
@@ -588,8 +588,8 @@ class MainActivity : AppCompatActivity() {
                 radius = 32f
                 cardElevation = 2f
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
-                strokeColor = ContextCompat.getColor(context, if (item.isSent) R.color.chip_border else R.color.primary)
-                strokeWidth = 1
+                setStrokeColor(ContextCompat.getColor(context, if (item.isSent) R.color.chip_border else R.color.primary))
+                setStrokeWidth(1)
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(0, 0, 0, 14)
                 }
@@ -666,7 +666,7 @@ class MainActivity : AppCompatActivity() {
                 val btnSendNow = MaterialButton(context).apply {
                     text = "Enviar Ahora"
                     textSize = 11f
-                    backgroundTintList = ContextCompat.getColorStateList(context, R.color.wa_bubble_out)
+                    setBackgroundTintList(ContextCompat.getColorStateList(context, R.color.wa_bubble_out))
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                     setOnClickListener {
                         openWhatsAppMessage(item.contactNameOrPhone, item.messageText)
@@ -730,10 +730,10 @@ class MainActivity : AppCompatActivity() {
         val btnPickDateTime = MaterialButton(this).apply {
             text = "Fecha y Hora: ${dateTimeFormat.format(calendar.time)}"
             textSize = 12f
-            strokeColor = ContextCompat.getColorStateList(context, R.color.primary)
-            strokeWidth = 2
+            setStrokeColor(ContextCompat.getColorStateList(context, R.color.primary))
+            setStrokeWidth(2)
             setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-            backgroundTintList = ContextCompat.getColorStateList(context, R.color.card_bg)
+            setBackgroundTintList(ContextCompat.getColorStateList(context, R.color.card_bg))
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 setMargins(0, 20, 0, 0)
             }
