@@ -243,4 +243,49 @@ class AppPreferences(context: Context) {
     fun clearCurrentStatus() {
         prefs.edit().remove("current_status_context").apply()
     }
+
+    // --- Scheduled Messages ---
+    fun getScheduledMessages(): MutableList<ScheduledMessage> {
+        val json = prefs.getString("scheduled_messages_json", null) ?: return mutableListOf()
+        return try {
+            val type = object : TypeToken<MutableList<ScheduledMessage>>() {}.type
+            gson.fromJson(json, type) ?: mutableListOf()
+        } catch (e: Exception) {
+            mutableListOf()
+        }
+    }
+
+    fun saveScheduledMessages(list: List<ScheduledMessage>) {
+        val json = gson.toJson(list)
+        prefs.edit().putString("scheduled_messages_json", json).apply()
+    }
+
+    fun addScheduledMessage(msg: ScheduledMessage) {
+        val list = getScheduledMessages()
+        list.add(0, msg)
+        saveScheduledMessages(list)
+    }
+
+    fun deleteScheduledMessage(id: String) {
+        val list = getScheduledMessages()
+        list.removeAll { it.id == id }
+        saveScheduledMessages(list)
+    }
+
+    fun markScheduledMessageSent(id: String) {
+        val list = getScheduledMessages()
+        list.find { it.id == id }?.isSent = true
+        saveScheduledMessages(list)
+    }
+
+    fun getDueScheduledMessageForContact(contact: String): ScheduledMessage? {
+        val list = getScheduledMessages()
+        val now = System.currentTimeMillis()
+        val lowerContact = contact.lowercase(Locale.getDefault())
+        return list.firstOrNull { msg ->
+            !msg.isSent && msg.isAutoReplyTrigger && msg.scheduledTimestamp <= now &&
+                    (lowerContact.contains(msg.contactNameOrPhone.lowercase(Locale.getDefault())) ||
+                     msg.contactNameOrPhone.lowercase(Locale.getDefault()).contains(lowerContact))
+        }
+    }
 }

@@ -423,8 +423,81 @@
         </LinearLayout>
 
         <!-- ============================================== -->
-        <!-- TAB 3: SIMULADOR DE RESPUESTAS EN VIVO         -->
+        <!-- TAB 3: MENSAJES PROGRAMADOS                    -->
         <!-- ============================================== -->
+        <LinearLayout
+            android:id="@+id/layoutScheduledTab"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <!-- Top Header & Add Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📅 Mensajes Programados"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddScheduledMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:backgroundTint="@color/primary"
+                    android:text="+ Programar"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="10dp"
+                    app:icon="@drawable/ic_add"
+                    app:iconSize="16dp"
+                    app:iconTint="@color/text_primary" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="Configura mensajes con fecha y hora. A la hora programada recibirás una alerta para enviarlo con 1 toque o el bot lo enviará si el contacto te escribe."
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvEmptyScheduled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:text="No tienes mensajes programados pendientes.\n\nPulsa el botón '+ Programar' para agendar un mensaje a quien elijas con fecha y hora."
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:visibility="visible" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/llScheduledContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </ScrollView>
+        </LinearLayout>
         <ScrollView
             android:id="@+id/layoutTesterTab"
             android:layout_width="match_parent"

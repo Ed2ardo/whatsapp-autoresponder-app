@@ -265,7 +265,15 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                     responseText = scheduleManager.getOutOfOfficeMessage(cleanName)
                     modeUsed = "Fuera de Horario"
                 } else {
-                    // B. Check Voice Note Auto-Reply
+                    // Check if there is a due Scheduled Message for this contact
+                    val scheduledMsg = prefs.getDueScheduledMessageForContact(cleanName)
+                    if (scheduledMsg != null) {
+                        responseText = scheduledMsg.messageText
+                        modeUsed = "Mensaje Programado"
+                        prefs.markScheduledMessageSent(scheduledMsg.id)
+                        broadcastLog("📅 Entregando mensaje programado pendiente a $cleanName.")
+                    } else {
+                        // B. Check Voice Note Auto-Reply
                     val isVoiceNote = fullMessage.contains("Nota de voz", ignoreCase = true) ||
                             fullMessage.contains("Mensaje de voz", ignoreCase = true) ||
                             fullMessage.contains("Audio (", ignoreCase = true)
@@ -298,6 +306,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                         }
                     }
                 }
+            }
 
                 if (responseText.isBlank()) return@launch
 

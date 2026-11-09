@@ -1,11 +1,16 @@
 package com.antigravity.whatsappbot
 
+import android.app.AlarmManager
+import android.app.DatePickerDialog
+import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Typeface
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
@@ -29,7 +34,9 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -68,6 +75,7 @@ class MainActivity : AppCompatActivity() {
         setupBottomNavigation()
         setupCopilotUI()
         setupRulesUI()
+        setupScheduledUI()
         setupTesterUI()
         setupSettingsUI()
 
@@ -77,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         updateStatusUI()
         renderCopilotChat()
         renderCustomRules()
+        renderScheduledMessages()
     }
 
     override fun onResume() {
@@ -173,16 +182,21 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_rules -> {
-                    showTab(copilot = false, rules = true, tester = false, settings = false)
+                    showTab(copilot = false, rules = true, scheduled = false, tester = false, settings = false)
                     renderCustomRules()
                     true
                 }
+                R.id.nav_scheduled -> {
+                    showTab(copilot = false, rules = false, scheduled = true, tester = false, settings = false)
+                    renderScheduledMessages()
+                    true
+                }
                 R.id.nav_tester -> {
-                    showTab(copilot = false, rules = false, tester = true, settings = false)
+                    showTab(copilot = false, rules = false, scheduled = false, tester = true, settings = false)
                     true
                 }
                 R.id.nav_settings -> {
-                    showTab(copilot = false, rules = false, tester = false, settings = true)
+                    showTab(copilot = false, rules = false, scheduled = false, tester = false, settings = true)
                     updateSettingsUIFromPrefs()
                     true
                 }
@@ -191,9 +205,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showTab(copilot: Boolean, rules: Boolean, tester: Boolean, settings: Boolean) {
+    private fun showTab(copilot: Boolean, rules: Boolean, scheduled: Boolean, tester: Boolean, settings: Boolean) {
         binding.layoutCopilotTab.visibility = if (copilot) View.VISIBLE else View.GONE
         binding.layoutRulesTab.visibility = if (rules) View.VISIBLE else View.GONE
+        binding.layoutScheduledTab.visibility = if (scheduled) View.VISIBLE else View.GONE
         binding.layoutTesterTab.visibility = if (tester) View.VISIBLE else View.GONE
         binding.layoutSettingsTab.visibility = if (settings) View.VISIBLE else View.GONE
     }
@@ -545,6 +560,306 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    // =========================================================================
+    // 5. TAB 3: MENSAJES PROGRAMADOS
+    // =========================================================================
+    private fun setupScheduledUI() {
+        binding.btnAddScheduledMessage.setOnClickListener {
+            showAddScheduledMessageDialog()
+        }
+    }
+
+    private fun renderScheduledMessages() {
+        binding.llScheduledContainer.removeAllViews()
+        val list = prefs.getScheduledMessages()
+
+        if (list.isEmpty()) {
+            binding.tvEmptyScheduled.visibility = View.VISIBLE
+            return
+        }
+
+        binding.tvEmptyScheduled.visibility = View.GONE
+        val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy - hh:mm a", Locale.getDefault())
+
+        for (item in list) {
+            val card = MaterialCardView(this).apply {
+                radius = 32f
+                cardElevation = 2f
+                setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
+                strokeColor = ContextCompat.getColor(context, if (item.isSent) R.color.chip_border else R.color.primary)
+                strokeWidth = 1
+                val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(0, 0, 0, 14)
+                }
+                layoutParams = lp
+
+                val innerLayout = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(24, 20, 24, 20)
+                }
+
+                // Row 1: Contact & Status Badge & Delete
+                val topRow = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+
+                val tvContact = TextView(context).apply {
+                    val lpContact = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    layoutParams = lpContact
+                    text = "👤 ${item.contactNameOrPhone}"
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    textSize = 14f
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+                topRow.addView(tvContact)
+
+                val tvStatus = TextView(context).apply {
+                    text = if (item.isSent) "✅ Enviado" else "⏳ Pendiente"
+                    setTextColor(ContextCompat.getColor(context, if (item.isSent) R.color.text_secondary else R.color.primary))
+                    textSize = 11f
+                    setPadding(12, 4, 12, 4)
+                }
+                topRow.addView(tvStatus)
+
+                val btnDelete = ImageView(context).apply {
+                    setImageResource(R.drawable.ic_delete)
+                    setPadding(12, 12, 12, 12)
+                    setOnClickListener {
+                        cancelAlarm(item.id)
+                        prefs.deleteScheduledMessage(item.id)
+                        renderScheduledMessages()
+                        Toast.makeText(context, "Mensaje programado eliminado", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                topRow.addView(btnDelete)
+
+                innerLayout.addView(topRow)
+
+                // Row 2: Message preview
+                val tvMessage = TextView(context).apply {
+                    text = "💬 \"${item.messageText}\""
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    textSize = 13f
+                    setPadding(0, 8, 0, 0)
+                }
+                innerLayout.addView(tvMessage)
+
+                // Row 3: Scheduled Date & Action
+                val bottomRow = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, 12, 0, 0)
+                }
+
+                val tvDate = TextView(context).apply {
+                    val lpDate = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    layoutParams = lpDate
+                    text = "⏰ ${dateFormat.format(Date(item.scheduledTimestamp))}"
+                    setTextColor(ContextCompat.getColor(context, R.color.accent))
+                    textSize = 11f
+                }
+                bottomRow.addView(tvDate)
+
+                val btnSendNow = MaterialButton(context).apply {
+                    text = "Enviar Ahora"
+                    textSize = 11f
+                    backgroundTintList = ContextCompat.getColorStateList(context, R.color.wa_bubble_out)
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setOnClickListener {
+                        openWhatsAppMessage(item.contactNameOrPhone, item.messageText)
+                        prefs.markScheduledMessageSent(item.id)
+                        renderScheduledMessages()
+                    }
+                }
+                bottomRow.addView(btnSendNow)
+
+                innerLayout.addView(bottomRow)
+                addView(innerLayout)
+            }
+
+            binding.llScheduledContainer.addView(card)
+        }
+    }
+
+    private fun showAddScheduledMessageDialog() {
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 24, 40, 16)
+        }
+
+        val tvContactLabel = TextView(this).apply {
+            text = "Contacto o Teléfono (ej: Carlos o +573001234567):"
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            textSize = 12f
+        }
+        dialogView.addView(tvContactLabel)
+
+        val etContact = EditText(this).apply {
+            hint = "Nombre del contacto o número"
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            textSize = 13f
+        }
+        dialogView.addView(etContact)
+
+        val tvMessageLabel = TextView(this).apply {
+            text = "Mensaje a enviar:"
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            textSize = 12f
+            setPadding(0, 20, 0, 0)
+        }
+        dialogView.addView(tvMessageLabel)
+
+        val etMessage = EditText(this).apply {
+            hint = "Escribe el mensaje programado..."
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            textSize = 13f
+            minLines = 2
+        }
+        dialogView.addView(etMessage)
+
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.MINUTE, 5)
+        }
+        val dateTimeFormat = SimpleDateFormat("dd/MM/yyyy - hh:mm a", Locale.getDefault())
+
+        val btnPickDateTime = MaterialButton(this).apply {
+            text = "Fecha y Hora: ${dateTimeFormat.format(calendar.time)}"
+            textSize = 12f
+            strokeColor = ContextCompat.getColorStateList(context, R.color.primary)
+            strokeWidth = 2
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            backgroundTintList = ContextCompat.getColorStateList(context, R.color.card_bg)
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, 20, 0, 0)
+            }
+            layoutParams = lp
+            setOnClickListener {
+                DatePickerDialog(this@MainActivity, { _, year, month, dayOfMonth ->
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+
+                    TimePickerDialog(this@MainActivity, { _, hourOfDay, minute ->
+                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                        calendar.set(Calendar.MINUTE, minute)
+                        calendar.set(Calendar.SECOND, 0)
+                        text = "Fecha y Hora: ${dateTimeFormat.format(calendar.time)}"
+                    }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false).show()
+
+                }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            }
+        }
+        dialogView.addView(btnPickDateTime)
+
+        AlertDialog.Builder(this)
+            .setTitle("Programar Mensaje")
+            .setView(dialogView)
+            .setPositiveButton("Guardar") { _, _ ->
+                val contact = etContact.text.toString().trim()
+                val text = etMessage.text.toString().trim()
+                val timestamp = calendar.timeInMillis
+
+                if (contact.isNotBlank() && text.isNotBlank()) {
+                    val scheduledMsg = ScheduledMessage(
+                        contactNameOrPhone = contact,
+                        messageText = text,
+                        scheduledTimestamp = timestamp,
+                        isSent = false,
+                        isAutoReplyTrigger = true
+                    )
+                    prefs.addScheduledMessage(scheduledMsg)
+                    scheduleAlarm(scheduledMsg)
+                    renderScheduledMessages()
+                    Toast.makeText(this, "✅ Mensaje programado con éxito", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Debes llenar el contacto y el mensaje", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun scheduleAlarm(scheduledMessage: ScheduledMessage) {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val intent = Intent(this, ScheduledMessageReceiver::class.java).apply {
+            putExtra(ScheduledMessageReceiver.EXTRA_MESSAGE_ID, scheduledMessage.id)
+            putExtra(ScheduledMessageReceiver.EXTRA_CONTACT, scheduledMessage.contactNameOrPhone)
+            putExtra(ScheduledMessageReceiver.EXTRA_TEXT, scheduledMessage.messageText)
+        }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val pendingIntent = PendingIntent.getBroadcast(this, scheduledMessage.id.hashCode(), intent, flags)
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    scheduledMessage.scheduledTimestamp,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    scheduledMessage.scheduledTimestamp,
+                    pendingIntent
+                )
+            }
+        } catch (e: Exception) {
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                scheduledMessage.scheduledTimestamp,
+                pendingIntent
+            )
+        }
+    }
+
+    private fun cancelAlarm(scheduledMessageId: String) {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val intent = Intent(this, ScheduledMessageReceiver::class.java)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val pendingIntent = PendingIntent.getBroadcast(this, scheduledMessageId.hashCode(), intent, flags)
+        alarmManager.cancel(pendingIntent)
+    }
+
+    private fun openWhatsAppMessage(contact: String, text: String) {
+        val cleanPhone = contact.filter { it.isDigit() || it == '+' }
+        val encodedText = try {
+            URLEncoder.encode(text, "UTF-8")
+        } catch (e: Exception) {
+            text
+        }
+
+        val intent = if (cleanPhone.length >= 7) {
+            val uri = Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$encodedText")
+            Intent(Intent.ACTION_VIEW, uri).apply {
+                setPackage("com.whatsapp")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+        } else {
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                setPackage("com.whatsapp")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "No se pudo abrir WhatsApp: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // =========================================================================
