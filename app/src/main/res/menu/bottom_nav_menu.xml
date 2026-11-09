@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_copilot"
+        android:icon="@drawable/ic_copilot"
+        android:title="Copiloto" />
+    <item
+        android:id="@+id/nav_rules"
+        android:icon="@drawable/ic_rule"
+        android:title="Reglas" />
+    <item
+        android:id="@+id/nav_tester"
+        android:icon="@drawable/ic_tester"
+        android:title="Simulador" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Ajustes" />
+</menu>

@@ -6,69 +6,127 @@
     android:background="@color/background"
     android:orientation="vertical">
 
-    <!-- Top App Header -->
-    <LinearLayout
+    <!-- Top App Bar / Hero Header -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="8dp">
+        app:cardBackgroundColor="@color/card_bg"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="0dp">
 
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="WhatsApp AutoResponder AI"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="10dp">
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchMaster"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            app:thumbTint="@color/primary"
-            app:trackTint="@color/card_bg" />
-    </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-    <!-- Top Navigation Tabs -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="@color/card_bg"
-        app:tabIndicatorColor="@color/tab_selected"
-        app:tabIndicatorHeight="3dp"
-        app:tabMode="fixed"
-        app:tabSelectedTextColor="@color/tab_selected"
-        app:tabTextColor="@color/tab_unselected">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:icon="@drawable/ic_copilot"
-            android:text="Copiloto IA" />
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:icon="@drawable/ic_rule"
-            android:text="Reglas &amp; FAQ" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="WhatsApp AutoResponder"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:icon="@drawable/ic_settings"
-            android:text="Ajustes" />
-    </com.google.android.material.tabs.TabLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@color/card_bg_light"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:text="IA Copilot"
+                            android:textColor="@color/primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
-    <!-- Content Containers Frame -->
+                    <!-- Quick Status & Stats Line -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvHeaderStatusBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟢 Activo"
+                            android:textColor="@color/primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvHeaderStats"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="• 0 respuestas hoy"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Quick Snooze Button (1h pause) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQuickSnooze"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginEnd="6dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:padding="0dp"
+                    app:cornerRadius="19dp"
+                    app:icon="@drawable/ic_snooze"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="20dp"
+                    app:iconTint="@color/warning" />
+
+                <!-- Master Switch -->
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchMaster"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:thumbTint="@color/primary"
+                    app:trackTint="@color/card_bg_light" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Main Content Frame (Tabs) -->
     <FrameLayout
+        android:id="@+id/containerContent"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <!-- ========================================== -->
         <!-- TAB 1: COPILOTO IA (Chat & Estado del Día) -->
@@ -80,15 +138,17 @@
             android:orientation="vertical"
             android:visibility="visible">
 
-            <!-- Card: Estado Activo de Hoy -->
+            <!-- Card: Estado Activo en WhatsApp -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardActiveStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="12dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="6dp"
                 app:cardBackgroundColor="@color/card_bg"
-                app:cardCornerRadius="14dp"
-                app:strokeColor="@color/primary"
+                app:cardCornerRadius="18dp"
+                app:strokeColor="@color/chip_border"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -107,17 +167,17 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="📌 ESTADO Y ACTIVIDAD DE HOY"
+                            android:text="📌 TU ESTADO ACTIVO EN WHATSAPP"
                             android:textColor="@color/primary"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnResetStatus"
                             style="@style/Widget.MaterialComponents.Button.TextButton"
                             android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:paddingHorizontal="8dp"
+                            android:layout_height="32dp"
+                            android:paddingHorizontal="6dp"
                             android:text="Limpiar"
                             android:textColor="@color/error"
                             android:textSize="11sp"
@@ -130,10 +190,11 @@
                         android:id="@+id/tvActiveStatusText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="⚪ No has registrado estados hoy. Escríbele a tu Copiloto aquí abajo para avisarle qué subiste o qué andas haciendo."
+                        android:layout_marginTop="2dp"
+                        android:lineSpacingExtra="2dp"
+                        android:text="⚪ No has registrado estados hoy. Escríbele a tu Copiloto aquí abajo para avisarle qué subiste o qué estás haciendo."
                         android:textColor="@color/text_primary"
-                        android:textSize="13sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -151,10 +212,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingBottom="10dp" />
+                    android:paddingBottom="8dp" />
             </ScrollView>
 
-            <!-- Quick Suggestion Chips (Horizontal Scroll) -->
+            <!-- Quick Action Chips (Horizontal Scroll) -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -228,7 +289,7 @@
                 android:id="@+id/pbCopilotLoading"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="4dp"
+                android:layout_height="3dp"
                 android:indeterminate="true"
                 android:visibility="gone" />
 
@@ -247,8 +308,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/ic_launcher"
-                    android:backgroundTint="@color/background"
+                    android:background="@color/background"
                     android:hint="Ej: Subí estado en el gym; no salgo hoy..."
                     android:maxLines="3"
                     android:paddingHorizontal="14dp"
@@ -259,8 +319,8 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSendCopilot"
-                    android:layout_width="46dp"
-                    android:layout_height="46dp"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="@color/primary"
                     android:insetLeft="0dp"
@@ -268,10 +328,11 @@
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
                     android:padding="0dp"
-                    app:cornerRadius="23dp"
+                    app:cornerRadius="22dp"
                     app:icon="@drawable/ic_send"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
+                    app:iconSize="20dp"
                     app:iconTint="@color/text_primary" />
             </LinearLayout>
         </LinearLayout>
@@ -284,9 +345,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="14dp"
+            android:padding="12dp"
             android:visibility="gone">
 
+            <!-- Search & Add Bar -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -294,45 +356,54 @@
                 android:orientation="horizontal"
                 android:layout_marginBottom="8dp">
 
-                <TextView
+                <EditText
+                    android:id="@+id/etSearchRules"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="40dp"
                     android:layout_weight="1"
-                    android:text="🎯 Preguntas y Respuestas Clave"
+                    android:background="@color/card_bg"
+                    android:drawableStart="@drawable/ic_search"
+                    android:drawablePadding="8dp"
+                    android:hint="Buscar reglas o palabras..."
+                    android:paddingHorizontal="12dp"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:textColorHint="@color/text_secondary"
+                    android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddRule"
                     android:layout_width="wrap_content"
-                    android:layout_height="38dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
                     android:backgroundTint="@color/primary"
-                    android:text="+ Nueva Regla"
+                    android:text="+ Regla"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:textStyle="bold"
+                    app:cornerRadius="10dp"
                     app:icon="@drawable/ic_add"
                     app:iconSize="16dp"
                     app:iconTint="@color/text_primary" />
             </LinearLayout>
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/tvRulesCounter"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Respuestas fijas para precios, disponibilidad o avisos. El bot las responde al instante y también guían a Gemini."
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
+                android:layout_marginBottom="10dp"
+                android:text="0 reglas activas"
+                android:textColor="@color/primary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvEmptyRules"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
+                android:layout_marginTop="50dp"
                 android:gravity="center"
                 android:lineSpacingExtra="4dp"
-                android:text="Aún no tienes reglas fijas creadas.\n\nPuedes pulsar el botón '+ Nueva Regla'\no simplemente decírselo al Copiloto en el chat:\n(ej: 'Si preguntan por la moto vale 5 millones')."
+                android:text="Aún no tienes reglas fijas creadas.\n\nPuedes pulsar el botón '+ Regla'\no simplemente decírselo al Copiloto en el chat:\n(ej: 'Si preguntan por la moto vale 5 millones')."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:visibility="visible" />
@@ -352,7 +423,226 @@
         </LinearLayout>
 
         <!-- ============================================== -->
-        <!-- TAB 3: AJUSTES & CONSOLA EN VIVO               -->
+        <!-- TAB 3: SIMULADOR DE RESPUESTAS EN VIVO         -->
+        <!-- ============================================== -->
+        <ScrollView
+            android:id="@+id/layoutTesterTab"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="18dp"
+                    app:strokeColor="@color/accent"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🧪 Simulador de WhatsApp en Vivo"
+                            android:textColor="@color/accent"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Escribe como si fueras un contacto para probar al instante cómo reaccionará tu bot antes de que te manden el mensaje en WhatsApp."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Nombre del Contacto:"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <EditText
+                            android:id="@+id/etTestContact"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_marginTop="4dp"
+                            android:background="@color/background"
+                            android:paddingHorizontal="10dp"
+                            android:text="Carlos"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="Mensaje Entrante de Prueba:"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <EditText
+                            android:id="@+id/etTestMessage"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="@color/background"
+                            android:hint="Ej: ¿Bro todavía tienes la moto? o 🔥"
+                            android:lines="2"
+                            android:padding="10dp"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_secondary"
+                            android:textSize="13sp" />
+
+                        <!-- Sample Quick Test Buttons -->
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:scrollbars="none">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipSampleStory"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:text="🔥 Reacción a estado"
+                                    android:textColor="@color/text_primary"
+                                    app:chipBackgroundColor="@color/card_bg_light"
+                                    app:chipStrokeColor="@color/chip_border" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipSampleVoiceNote"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:text="🎤 Nota de voz"
+                                    android:textColor="@color/text_primary"
+                                    app:chipBackgroundColor="@color/card_bg_light"
+                                    app:chipStrokeColor="@color/chip_border" />
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipSampleQuestion"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="❓ ¿Qué haces hoy?"
+                                    android:textColor="@color/text_primary"
+                                    app:chipBackgroundColor="@color/card_bg_light"
+                                    app:chipStrokeColor="@color/chip_border" />
+                            </LinearLayout>
+                        </HorizontalScrollView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRunSimulation"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:backgroundTint="@color/accent"
+                            android:text="⚡ Probar Respuesta Ahora"
+                            android:textColor="@color/text_primary"
+                            android:textStyle="bold"
+                            app:cornerRadius="12dp" />
+
+                        <ProgressBar
+                            android:id="@+id/pbSimulationLoading"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="4dp"
+                            android:layout_marginTop="8dp"
+                            android:indeterminate="true"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Simulation Result Card (Simulated WhatsApp Preview) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSimulationResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="18dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:id="@+id/tvSimSourceBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@color/card_bg_light"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
+                            android:text="🤖 Respondido por: Gemini IA"
+                            android:textColor="@color/primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <!-- Simulated Incoming Bubble -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:gravity="start">
+
+                            <TextView
+                                android:id="@+id/tvSimIncomingText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@color/wa_bubble_in"
+                                android:padding="12dp"
+                                android:text="¿Hola bro cómo estás?"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <!-- Simulated Outgoing Bubble -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="end">
+
+                            <TextView
+                                android:id="@+id/tvSimOutgoingText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@color/wa_bubble_out"
+                                android:padding="12dp"
+                                android:text="¡Hola Carlos! Bien gracias..."
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: AJUSTES & CONSOLA EN VIVO               -->
         <!-- ============================================== -->
         <ScrollView
             android:id="@+id/layoutSettingsTab"
@@ -374,7 +664,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:cardBackgroundColor="@color/card_bg"
-                    app:cardCornerRadius="14dp"
+                    app:cardCornerRadius="16dp"
                     app:strokeColor="@color/warning"
                     app:strokeWidth="1dp">
 
@@ -397,7 +687,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Para responder mensajes automáticamente en tu Galaxy A15, debes habilitar el acceso a notificaciones."
+                            android:text="Para responder mensajes en tu Galaxy A15, debes habilitar el acceso a notificaciones."
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
@@ -419,7 +709,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:cardBackgroundColor="@color/card_bg"
-                    app:cardCornerRadius="14dp">
+                    app:cardCornerRadius="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -510,13 +800,143 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Comportamiento Avanzado (Pausas y Notas de Voz) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🛡️ Pausa Manual &amp; Notas de Voz"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <!-- Manual Pause Selector -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="Suspender bot si respondes tú mismo:"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPause1m"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="36dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="1 min"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPause5m"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="36dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="5 min"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnPause15m"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="36dp"
+                                android:layout_weight="1"
+                                android:text="15 min"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <!-- Voice Note Handling -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="🎤 Responder a Notas de Voz"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/switchVoiceNote"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/primary" />
+                        </LinearLayout>
+
+                        <EditText
+                            android:id="@+id/etVoiceNoteMsg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="@color/background"
+                            android:lines="2"
+                            android:padding="8dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp" />
+
+                        <!-- Ignored Contacts / Exceptions -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="🚫 Contactos Ignorados (No responder a X):"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvIgnoredContactsList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="(Ningún contacto ignorado configurado)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnManageIgnored"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:text="+ Administrar Contactos Ignorados"
+                            android:textColor="@color/primary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- Inteligencia Artificial (Gemini) Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:cardBackgroundColor="@color/card_bg"
-                    app:cardCornerRadius="14dp">
+                    app:cardCornerRadius="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -593,26 +1013,44 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:backgroundTint="@color/primary"
-                    android:text="💾 Guardar Configuración de Ajustes"
+                    android:text="💾 Guardar Todos los Ajustes"
                     android:textColor="@color/text_primary"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp" />
 
                 <!-- Real-time Console Log -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="6dp"
-                    android:text="📡 Registro en Vivo (Actividad de WhatsApp):"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📡 Registro en Vivo (Actividad WhatsApp):"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearLogs"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:text="Borrar Logs"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="200dp"
                     app:cardBackgroundColor="#050914"
-                    app:cardCornerRadius="12dp">
+                    app:cardCornerRadius="14dp">
 
                     <ScrollView
                         android:id="@+id/scrollLogs"
@@ -633,4 +1071,16 @@
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
+
+    <!-- Bottom Navigation Bar (Modern Ergonomic Thumb Navigation) -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/card_bg"
+        app:elevation="8dp"
+        app:itemIconTint="@color/tab_selected"
+        app:itemTextColor="@color/tab_selected"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/bottom_nav_menu" />
 </LinearLayout>

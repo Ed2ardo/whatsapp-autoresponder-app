@@ -34,8 +34,6 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
     // Debounce window in ms: waits for the user to finish typing multiple lines
     private val DEBOUNCE_DELAY_MS = 6000L
-    // Pause duration when user manually replies: 1 minute (60,000 ms)
-    private val MANUAL_PAUSE_DURATION_MS = 60 * 1000L
 
     companion object {
         const val ACTION_NEW_LOG = "com.antigravity.whatsappbot.NEW_LOG"
@@ -65,6 +63,13 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         if (pkg != "com.whatsapp" && pkg != "com.whatsapp.w4b") return
         if (!prefs.isBotEnabled) return
 
+        // Check if Bot is in Snooze mode (Siesta / Pausa temporal de 1h o 2h)
+        if (prefs.isSnoozed()) {
+            val remainingMins = Math.max(1, ((prefs.snoozeUntil - System.currentTimeMillis()) / 60000).toInt())
+            broadcastLog("💤 Bot en Modo Siesta / Pausa ($remainingMins min restantes). Mensaje ignorado.")
+            return
+        }
+
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
 
@@ -93,12 +98,20 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
         val cleanName = sanitizeName(rawSender)
 
+        // Check if contact is in the Ignored List / Exceptions (VIPs o personas a no responder)
+        if (prefs.isContactIgnored(rawSender)) {
+            broadcastLog("🚫 $cleanName está en tu lista de contactos ignorados (excepciones). No se responderá.")
+            return
+        }
+
+        val manualPauseDuration = prefs.manualPauseMinutes * 60 * 1000L
+
         // 3. Detect Manual User Intervention (If Eduardo replied himself)
         val isManualSender = rawSender.equals("Tú", ignoreCase = true) || rawSender.equals("Yo", ignoreCase = true)
         val isManualText = rawMessage.startsWith("Tú: ", ignoreCase = true) || rawMessage.startsWith("Yo: ", ignoreCase = true)
 
         if (isManualSender || isManualText) {
-            val pauseUntil = System.currentTimeMillis() + MANUAL_PAUSE_DURATION_MS
+            val pauseUntil = System.currentTimeMillis() + manualPauseDuration
 
             if (!isManualSender) {
                 // Eduardo replied to this specific contact (rawSender = contact name, rawMessage = "Tú: ...")
@@ -106,7 +119,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 contactJobs[rawSender]?.cancel()
                 contactJobs.remove(rawSender)
                 contactBuffers.remove(rawSender)
-                broadcastLog("🛑 Respondiste manualmente a $cleanName. Auto-respuesta cancelada y chat suspendido por 1 min.")
+                broadcastLog("🛑 Respondiste manualmente a $cleanName. Auto-respuesta cancelada y chat suspendido por ${prefs.manualPauseMinutes} min.")
             } else {
                 // Sender is "Tú", pause all currently active contacts
                 for (activeContact in contactBuffers.keys()) {
@@ -115,7 +128,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                     contactJobs.remove(activeContact)
                 }
                 contactBuffers.clear()
-                broadcastLog("🛑 Detectada respuesta tuya en WhatsApp. Chats activos suspendidos por 1 min.")
+                broadcastLog("🛑 Detectada respuesta tuya en WhatsApp. Chats activos suspendidos por ${prefs.manualPauseMinutes} min.")
             }
             return
         }
@@ -130,11 +143,11 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                         senderPerson.equals("Tú", ignoreCase = true) ||
                         senderPerson.equals("Yo", ignoreCase = true)
                 if (isSelf) {
-                    manuallyPausedUntil[rawSender] = System.currentTimeMillis() + MANUAL_PAUSE_DURATION_MS
+                    manuallyPausedUntil[rawSender] = System.currentTimeMillis() + manualPauseDuration
                     contactJobs[rawSender]?.cancel()
                     contactJobs.remove(rawSender)
                     contactBuffers.remove(rawSender)
-                    broadcastLog("🛑 Último mensaje en chat enviado por ti a $cleanName. Auto-respuesta cancelada y suspendida por 1 min.")
+                    broadcastLog("🛑 Último mensaje en chat enviado por ti a $cleanName. Auto-respuesta cancelada y suspendida por ${prefs.manualPauseMinutes} min.")
                     return
                 }
             }
@@ -174,7 +187,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             }
         }
 
-        // Check if chat is in manual pause window (1 minute after Eduardo intervened)
+        // Check if chat is in manual pause window after Eduardo intervened
         val pauseUntil = manuallyPausedUntil[rawSender] ?: 0L
         if (System.currentTimeMillis() < pauseUntil) {
             val remainingSecs = Math.max(1, ((pauseUntil - System.currentTimeMillis()) / 1000).toInt())
@@ -247,29 +260,42 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 var responseText = ""
                 var modeUsed = ""
 
+                // A. Check Schedule / Out of office
                 if (scheduleManager.isOutsideSchedule()) {
                     responseText = scheduleManager.getOutOfOfficeMessage(cleanName)
                     modeUsed = "Fuera de Horario"
                 } else {
-                    // Check custom dynamic rules (Option 3 / FAQ)
-                    val customMatch = ruleEngine.evaluateCustomRules(fullMessage, prefs.getCustomRules())
-                    if (customMatch != null) {
-                        responseText = customMatch
-                        modeUsed = "Regla Dinámica (FAQ)"
-                    } else if (prefs.isAiMode && prefs.geminiApiKey.isNotBlank()) {
-                        try {
-                            broadcastLog("🤖 Consultando Gemini IA con Contexto y Estados...")
-                            responseText = geminiManager.generateReply(cleanName, fullMessage)
-                            modeUsed = "Gemini IA"
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error Gemini: ${e.message}")
-                            broadcastLog("⚠️ Error IA (${e.message}). Usando regla local...")
-                            responseText = ruleEngine.evaluate(cleanName, fullMessage)
-                            modeUsed = "Regla Respaldo"
-                        }
+                    // B. Check Voice Note Auto-Reply
+                    val isVoiceNote = fullMessage.contains("Nota de voz", ignoreCase = true) ||
+                            fullMessage.contains("Mensaje de voz", ignoreCase = true) ||
+                            fullMessage.contains("Audio (", ignoreCase = true)
+
+                    if (isVoiceNote && prefs.autoReplyToVoiceNotes) {
+                        responseText = prefs.voiceNoteMessage.replace("{nombre}", cleanName)
+                        modeUsed = "Nota de Voz"
                     } else {
-                        responseText = ruleEngine.evaluate(cleanName, fullMessage)
-                        modeUsed = "Regla Local"
+                        // C. Check Custom Dynamic Rules (FAQ)
+                        val customMatch = ruleEngine.evaluateCustomRules(fullMessage, prefs.getCustomRules())
+                        if (customMatch != null) {
+                            responseText = customMatch
+                            modeUsed = "Regla Dinámica (FAQ)"
+                        } else if (prefs.isAiMode && prefs.geminiApiKey.isNotBlank()) {
+                            // D. Gemini AI Response with full context & status
+                            try {
+                                broadcastLog("🤖 Consultando Gemini IA con Contexto y Estados...")
+                                responseText = geminiManager.generateReply(cleanName, fullMessage)
+                                modeUsed = "Gemini IA"
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error Gemini: ${e.message}")
+                                broadcastLog("⚠️ Error IA (${e.message}). Usando regla local...")
+                                responseText = ruleEngine.evaluate(cleanName, fullMessage)
+                                modeUsed = "Regla Respaldo"
+                            }
+                        } else {
+                            // E. Local Rules Fallback
+                            responseText = ruleEngine.evaluate(cleanName, fullMessage)
+                            modeUsed = "Regla Local"
+                        }
                     }
                 }
 
@@ -290,6 +316,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 val success = NotificationUtils.sendReply(applicationContext, action, responseText)
                 if (success) {
                     antiBanEngine.recordReply(rawSender)
+                    prefs.incrementRepliesCount()
                     broadcastLog("📤 Respondido a $cleanName: \"$responseText\"")
                 } else {
                     broadcastLog("❌ Falló el envío de respuesta a $cleanName.")

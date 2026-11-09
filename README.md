@@ -1,94 +1,60 @@
 # 📱 WhatsApp AutoResponder AI (App Nativa para Android / Galaxy A15)
 
-Aplicación nativa para Android que responde automáticamente mensajes de WhatsApp y WhatsApp Business utilizando **Inteligencia Artificial (Gemini 3.5 Flash Lite)**, un **Copiloto de IA conversacional**, un **motor de reglas y FAQ dinámicas**, **modo horario dinámico**, **memoria de conversación** y **protección anti-baneo**.
+Aplicación nativa para Android moderna, rápida y adaptable diseñada con principios **Material 3 / One UI 6**. Responde automáticamente mensajes de WhatsApp y WhatsApp Business utilizando **Inteligencia Artificial (Gemini 3.5 Flash Lite)**, un **Copiloto de IA conversacional**, un **Simulador en Vivo**, **Respuestas a Notas de Voz**, **Filtro de Excepciones VIP**, **modo horario dinámico**, **memoria de conversación de 12 líneas** y **protección anti-baneo**.
 
 ---
 
-## 🌟 Novedades y Características Principales
+## 🌟 Novedades y Diseño Mejorado
 
-1. **💬 Chat Copiloto IA (Novedades & Estados de WhatsApp):**
-   * Chatea directamente con tu bot dentro de la app para contarle qué subiste a tus estados de WhatsApp o qué estás haciendo hoy:
-     * *"Subí foto en Toro Burger comiendo hamburguesas"*
-     * *"Si me preguntan por la moto, diles que ya la vendí en 5 millones"*
-     * *"Hoy ando estudiando para la DIAN, no salgo"*
-   * El Copiloto asimila la información, actualiza tu contexto activo y te confirma cómo responderá si tus contactos reaccionan o preguntan.
+1. **🎨 Diseño Moderno Material 3 / One UI 6:**
+   * **Navegación Ergonómica Inferior (Bottom Navigation Bar):** Diseñada para usarse cómodamente con el pulgar en pantallas grandes (Galaxy A15 de 6.5").
+   * **Cabecera Inteligente en Vivo:** Con indicador de estado (*🟢 Activo / 💤 Siesta / 🔴 Apagado*), contador de mensajes atendidos hoy (*"• 14 respuestas hoy"*) y botón rápido de Siesta/Pausa.
+   * **Chat Copiloto con estética WhatsApp:** Burbujas con hora exacta, etiquetas de remitente y chips de sugerencias rápidas.
 
-2. **📌 Tarjeta de Estado Activo de Hoy:**
-   * Muestra en tiempo real el contexto que el bot tiene en memoria sobre tu día.
-   * Cuenta con un botón de **«Limpiar»** para restablecer el contexto al terminar el día o cambiar de actividad.
+2. **🧪 Simulador de Respuestas en Vivo (In-App Sandbox):**
+   * Ya no necesitas probar el bot enviando mensajes desde el teléfono de otra persona.
+   * Ve a la pestaña **«Simulador»**, escribe cualquier mensaje de prueba como si fueras un contacto (ej: *"¿Bro a cuánto la moto?"* o *"invita a la hamburguesa 🔥"*) y pulsa **Probar Respuesta**.
+   * Verás al instante la respuesta exacta generada y la fuente que la produjo (*Gemini IA, Regla FAQ, Nota de Voz o Ausencia*).
 
-3. **🎯 Reglas Dinámicas & FAQ («Si preguntan X → responder Y»):**
-   * Configura respuestas exactas para precios, disponibilidad, direcciones o avisos.
-   * Se evalúan al instante y también nutren a Gemini como datos oficiales.
-   * Puedes crearlas manualmente desde el botón **«+ Nueva Regla»** o decírselo al Copiloto en el chat.
+3. **🎤 Respuestas Inteligentes a Notas de Voz:**
+   * Detecta automáticamente cuando te envían un audio en WhatsApp y responde cortésmente en texto:  
+     *«¡Hola! Ahorita ando algo embolatado y no puedo escuchar audios 🎧. Déjame dicho en texto lo que necesitas y te respondo de una 👍»*.
 
-4. **100% Autónoma en tu Celular:**  
-   Funciona directamente en tu Samsung Galaxy A15 sin necesidad de mantener encendido tu computador ni contratar servidores.
+4. **🚫 Lista de Contactos Ignorados / Excepciones (VIPs):**
+   * Configura nombres o palabras clave (ej: *Mamá, Jefe, Novia*) para que el bot **NUNCA** les responda automáticamente y te deje la conversación siempre a ti.
 
-5. **Cero Riesgo de Baneo:**  
-   Utiliza el servicio nativo de **`NotificationListenerService`** y la función oficial de **«Respuesta Rápida»** de Android. Para los servidores de Meta, es tu propio teléfono respondiendo desde la app oficial.
+5. **💤 Botón Rápido de «Modo Siesta» (Snooze 1h / 2h / 4h):**
+   * Un toque en el ícono de luna en la cabecera para silenciar el bot durante una reunión, siesta o cuando prestas el teléfono.
 
-6. **Filtro Estricto de Grupos:**  
-   Detecta automáticamente si el mensaje proviene de un grupo de WhatsApp y lo descarta para responder únicamente a **chats individuales**.
+6. **⏱️ Duración de Suspensión Manual Personalizable:**
+   * Si respondes tú mismo en WhatsApp, la auto-respuesta se cancela y puedes elegir cuánto tiempo suspender el chat: **1 minuto**, **5 minutos** o **15 minutos**.
 
-7. **Modo Horario Dinámico y Natural:**  
-   * **Dentro del horario:** Responde con tu personalidad de IA o reglas normales.
-   * **Fuera de horario (Noches / Descanso):** Envía un mensaje natural informando que no estás disponible y que responderás apenas te desocupes.
+7. **🔍 Buscador de Reglas & FAQ:**
+   * Filtra tus reglas y preguntas frecuentes al instante en la pestaña de Reglas.
 
-8. **Memoria de Conversación (Contexto Multi-turno):**  
-   Mantiene en memoria los últimos mensajes del chat para que Gemini entienda el hilo de la conversación y no dé respuestas aisladas.
+8. **💬 Chat Copiloto IA (Estados y Novedades del Día):**
+   * Cuéntale a tu Copiloto en lenguaje cotidiano qué subiste a tus estados de WhatsApp o qué andas haciendo hoy para que responda coherentemente a las reacciones (🔥, 🤤) y preguntas de tus amigos.
 
-9. **Protección Anti-Spam y Anti-Ban:**  
-   * Cooldown por contacto para evitar bucles.
-   * Retardo humano aleatorio de 3.0 a 5.0 segundos antes de enviar cada respuesta.
-   * Pausa automática si detecta que tú mismo respondiste desde WhatsApp.
+9. **🧠 Memoria Multi-turno de 12 Líneas:**
+   * Conserva hasta 12 líneas de conversación previa para no perder el hilo nunca.
 
-10. **Consola en Vivo:**  
-    Muestra en tiempo real los mensajes recibidos, retardos aplicados y respuestas enviadas.
+10. **🛡️ 100% Cero Riesgo de Baneo:**
+    * Funciona a través del servicio oficial de Notificaciones de Android (`NotificationListenerService`). No usa servidores externos ni emulaciones web.
 
 ---
 
-## 🚀 ¿Cómo compilar el nuevo archivo `.apk` para instalarlo en tu Galaxy A15?
+## 🚀 ¿Cómo compilar e instalar el nuevo APK en tu Galaxy A15?
 
-### Opción 1: Compilación Automática en GitHub (Recomendada - Cero programas en el PC)
-
-El proyecto ya incluye el archivo de flujo `.github/workflows/build-apk.yml`.
-1. Sube los cambios de esta carpeta (`WhatsAppAutoResponderApp`) a tu repositorio en **[GitHub](https://github.com)**:
-   ```bash
-   git add .
-   git commit -m "feat: Copiloto IA de Estados y Reglas Dinámicas FAQ"
-   git push
-   ```
-2. Al hacer el `push`, GitHub iniciará automáticamente una acción (**Actions**) que compilará el archivo APK en 2 minutos.
-3. Entra a la pestaña **Actions** de tu repositorio > Clic en la última compilación > Descarga el archivo **`WhatsAppAutoResponder-APK.zip`**.
-4. Descomprímelo y pásate el archivo **`app-debug.apk`** a tu celular (o descárgalo directamente desde el navegador de tu Galaxy A15).
-
-### Opción 2: Usando Android Studio
-1. Abre **Android Studio** en tu PC.
-2. Selecciona **Open** y abre la carpeta `C:\Users\eduro\Documents\WhatsAppAutoResponderApp`.
-3. Ve al menú superior **Build** > **Build Bundle(s) / APK(s)** > **Build APK(s)**.
-4. Conecta tu Galaxy A15 por cable USB y haz clic en **Run** (ícono verde de play).
+### Compilación Automática en GitHub (Recomendada)
+1. Los cambios ya están listos en el repositorio.
+2. Cada vez que se hace un `push`, GitHub Actions compila automáticamente el archivo APK en ~2 minutos.
+3. Entra a la pestaña **Actions** de tu repositorio en GitHub:  
+   👉 **[Ver compilaciones en GitHub Actions](https://github.com/Ed2ardo/whatsapp-autoresponder-app/actions)**
+4. Haz clic en la última compilación exitosa y en la sección **Artifacts** descarga **`WhatsAppAutoResponder-APK.zip`**.
+5. Descomprímelo e instala el archivo **`app-debug.apk`** en tu teléfono.
 
 ---
 
-## ⚙️ Configuración Importante en tu Samsung Galaxy A15 (Android 14 / One UI 6)
-
-Para que Android permita que la app responda siempre en segundo plano:
-
-### 1. Activar Permiso de Acceso a Notificaciones
-* Al abrir la app, ve a la pestaña **«Ajustes»** y toca el botón amarillo **«Activar Permiso en Ajustes»**.
-* Busca **WhatsApp AutoResponder AI** y activa el interruptor.
-
-> [!IMPORTANT]
-> **En Android 14 (Ajustes Restringidos):**  
-> Si el interruptor aparece en gris y dice *"Ajuste restringido"*:  
-> 1. Ve a los **Ajustes** de tu celular > **Aplicaciones**.  
-> 2. Busca **WhatsApp AutoResponder AI**.  
-> 3. Toca los **tres puntos** arriba a la derecha y selecciona **«Permitir ajustes restringidos»**.  
-> 4. Vuelve a la app y ya te dejará activar el permiso normalmente.
-
-### 2. Evitar que Samsung ponga la app en reposo (Batería)
-1. En **Ajustes** > **Aplicaciones** > **WhatsApp AutoResponder AI**.
-2. Toca en **Batería**.
-3. Selecciona la opción **«Sin restricciones»** (Unrestricted).  
-   *Esto garantiza que One UI no cierre el bot cuando la pantalla del teléfono esté apagada.*
+## ⚙️ Permisos Clave en tu Galaxy A15 (Android 14)
+* **Acceso a Notificaciones:** Ajustes > Aplicaciones > WhatsApp AutoResponder AI > Permitir notificaciones y servicio de escucha.
+* **Batería Sin Restricciones:** Ajustes > Aplicaciones > WhatsApp AutoResponder AI > Batería > Sin restricciones (Unrestricted).

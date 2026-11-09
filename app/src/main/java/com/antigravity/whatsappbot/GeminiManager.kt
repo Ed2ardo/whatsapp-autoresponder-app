@@ -311,4 +311,75 @@ NOTA IMPORTANTE: Si el mensaje de Eduardo NO contiene una regla específica de t
             )
         }
     }
+
+    /**
+     * Simulates what the bot will reply to an incoming WhatsApp message,
+     * allowing Eduardo to test questions, reactions, and rules right in the app.
+     */
+    suspend fun simulateBotReply(
+        contactName: String,
+        incomingMessage: String,
+        scheduleManager: ScheduleManager,
+        ruleEngine: RuleEngine
+    ): SimulationResult = withContext(Dispatchers.IO) {
+        val cleanName = contactName.ifBlank { "Amigo" }
+
+        // 1. Outside schedule?
+        if (scheduleManager.isOutsideSchedule()) {
+            return@withContext SimulationResult(
+                reply = scheduleManager.getOutOfOfficeMessage(cleanName),
+                source = "🕒 Modo Horario / Ausencia"
+            )
+        }
+
+        // 2. Voice note?
+        val isVoiceNote = incomingMessage.contains("Nota de voz", ignoreCase = true) ||
+                incomingMessage.contains("Mensaje de voz", ignoreCase = true) ||
+                incomingMessage.contains("Audio (", ignoreCase = true)
+        if (isVoiceNote && prefs.autoReplyToVoiceNotes) {
+            return@withContext SimulationResult(
+                reply = prefs.voiceNoteMessage.replace("{nombre}", cleanName),
+                source = "🎤 Respuesta a Nota de Voz"
+            )
+        }
+
+        // 3. Custom dynamic rule (FAQ)?
+        val customMatch = ruleEngine.evaluateCustomRules(incomingMessage, prefs.getCustomRules())
+        if (customMatch != null) {
+            return@withContext SimulationResult(
+                reply = customMatch,
+                source = "🎯 Regla Dinámica (FAQ)"
+            )
+        }
+
+        // 4. Gemini AI?
+        if (prefs.isAiMode && prefs.geminiApiKey.isNotBlank()) {
+            try {
+                val reply = generateReply(cleanName, incomingMessage)
+                return@withContext SimulationResult(
+                    reply = reply,
+                    source = "🤖 Gemini IA (${prefs.geminiModel})"
+                )
+            } catch (e: Exception) {
+                val fallback = ruleEngine.evaluate(cleanName, incomingMessage)
+                return@withContext SimulationResult(
+                    reply = fallback,
+                    source = "⚠️ Regla Respaldo (Error IA: ${e.message})"
+                )
+            }
+        }
+
+        // 5. Local rules
+        val localReply = ruleEngine.evaluate(cleanName, incomingMessage)
+        return@withContext SimulationResult(
+            reply = localReply,
+            source = "📋 Motor de Reglas Locales"
+        )
+    }
 }
+
+data class SimulationResult(
+    val reply: String,
+    val source: String
+)
+

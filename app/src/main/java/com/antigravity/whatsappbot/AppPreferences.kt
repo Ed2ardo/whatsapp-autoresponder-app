@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class AppPreferences(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("wa_bot_prefs", Context.MODE_PRIVATE)
@@ -61,6 +64,38 @@ class AppPreferences(context: Context) {
             "¡Hola {nombre}! En este momento no estoy disponible (ya ando descansando / fuera de horario 🌙). Déjame tu mensaje con lo que necesitas y te respondo apenas me active 👍") ?: ""
         set(value) = prefs.edit().putString("out_of_office_msg", value).apply()
 
+    // Manual Pause Duration (en minutos: 1, 3, 5, 15)
+    var manualPauseMinutes: Int
+        get() = prefs.getInt("manual_pause_mins", 1)
+        set(value) = prefs.edit().putInt("manual_pause_mins", value).apply()
+
+    // Voice Notes Auto-Reply
+    var autoReplyToVoiceNotes: Boolean
+        get() = prefs.getBoolean("voice_notes_reply", true)
+        set(value) = prefs.edit().putBoolean("voice_notes_reply", value).apply()
+
+    var voiceNoteMessage: String
+        get() = prefs.getString("voice_note_msg",
+            "¡Hola {nombre}! Ahorita ando algo embolatado y no puedo escuchar audios 🎧. Déjame dicho en texto lo que necesitas y te respondo de una 👍") ?: ""
+        set(value) = prefs.edit().putString("voice_note_msg", value).apply()
+
+    // Snooze / Pausa Temporal Rápida (timestamp hasta cuando silenciar)
+    var snoozeUntil: Long
+        get() = prefs.getLong("snooze_until", 0L)
+        set(value) = prefs.edit().putLong("snooze_until", value).apply()
+
+    fun isSnoozed(): Boolean {
+        return System.currentTimeMillis() < snoozeUntil
+    }
+
+    fun setSnoozeHours(hours: Int) {
+        snoozeUntil = System.currentTimeMillis() + (hours * 60 * 60 * 1000L)
+    }
+
+    fun clearSnooze() {
+        snoozeUntil = 0L
+    }
+
     // Anti-Ban & Filtering
     var ignoreGroups: Boolean
         get() = prefs.getBoolean("ignore_groups", true)
@@ -77,6 +112,65 @@ class AppPreferences(context: Context) {
     var maxDelaySeconds: Int
         get() = prefs.getInt("max_delay_sec", 5)
         set(value) = prefs.edit().putInt("max_delay_sec", value).apply()
+
+    // --- Daily Stats / Contador de Respuestas ---
+    fun getTodayRepliesCount(): Int {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val savedDate = prefs.getString("stats_last_date", "")
+        return if (savedDate == todayStr) {
+            prefs.getInt("stats_today_count", 0)
+        } else {
+            0
+        }
+    }
+
+    fun incrementRepliesCount() {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val savedDate = prefs.getString("stats_last_date", "")
+        val currentCount = if (savedDate == todayStr) prefs.getInt("stats_today_count", 0) else 0
+        prefs.edit()
+            .putString("stats_last_date", todayStr)
+            .putInt("stats_today_count", currentCount + 1)
+            .apply()
+    }
+
+    // --- Ignored Contacts / Excepciones (No responder a X) ---
+    fun getIgnoredContacts(): MutableList<String> {
+        val json = prefs.getString("ignored_contacts_json", null) ?: return mutableListOf()
+        return try {
+            val type = object : TypeToken<MutableList<String>>() {}.type
+            gson.fromJson(json, type) ?: mutableListOf()
+        } catch (e: Exception) {
+            mutableListOf()
+        }
+    }
+
+    fun saveIgnoredContacts(contacts: List<String>) {
+        val json = gson.toJson(contacts)
+        prefs.edit().putString("ignored_contacts_json", json).apply()
+    }
+
+    fun addIgnoredContact(name: String) {
+        val list = getIgnoredContacts()
+        val trimmed = name.trim()
+        if (trimmed.isNotBlank() && !list.any { it.equals(trimmed, ignoreCase = true) }) {
+            list.add(trimmed)
+            saveIgnoredContacts(list)
+        }
+    }
+
+    fun removeIgnoredContact(name: String) {
+        val list = getIgnoredContacts()
+        list.removeAll { it.equals(name.trim(), ignoreCase = true) }
+        saveIgnoredContacts(list)
+    }
+
+    fun isContactIgnored(fullName: String): Boolean {
+        val ignored = getIgnoredContacts()
+        if (ignored.isEmpty()) return false
+        val lower = fullName.lowercase(Locale.getDefault())
+        return ignored.any { lower.contains(it.lowercase(Locale.getDefault())) }
+    }
 
     // --- Custom Dynamic Rules ("Si preguntan X -> Responder Y") ---
     fun getCustomRules(): MutableList<CustomRule> {

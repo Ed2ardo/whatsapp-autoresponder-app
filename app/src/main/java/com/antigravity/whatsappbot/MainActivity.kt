@@ -5,10 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -22,12 +23,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.antigravity.whatsappbot.databinding.ActivityMainBinding
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -35,6 +38,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: AppPreferences
     private lateinit var geminiManager: GeminiManager
+    private lateinit var scheduleManager: ScheduleManager
+    private val ruleEngine = RuleEngine()
+
+    private var currentRulesFilter: String = ""
 
     private val logReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -43,6 +50,7 @@ class MainActivity : AppCompatActivity() {
                 val currentText = binding.tvLogs.text.toString()
                 binding.tvLogs.text = "$currentText\n$message"
                 binding.scrollLogs.post { binding.scrollLogs.fullScroll(View.FOCUS_DOWN) }
+                updateHeaderStats()
             }
         }
     }
@@ -54,13 +62,18 @@ class MainActivity : AppCompatActivity() {
 
         prefs = AppPreferences(this)
         geminiManager = GeminiManager(prefs)
+        scheduleManager = ScheduleManager(prefs)
 
-        setupNavigation()
+        setupHeader()
+        setupBottomNavigation()
         setupCopilotUI()
         setupRulesUI()
+        setupTesterUI()
         setupSettingsUI()
 
         loadPreferences()
+        updateHeaderStatus()
+        updateHeaderStats()
         updateStatusUI()
         renderCopilotChat()
         renderCustomRules()
@@ -69,6 +82,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         checkNotificationPermission()
+        updateHeaderStatus()
+        updateHeaderStats()
 
         val filter = IntentFilter(WhatsAppNotificationListener.ACTION_NEW_LOG)
         ContextCompat.registerReceiver(this, logReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -87,45 +102,114 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================================
-    // NAVIGATION TABS
+    // 1. TOP HEADER & QUICK CONTROLS
     // =========================================================================
-    private fun setupNavigation() {
-        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                when (tab?.position) {
-                    0 -> showTab(copilot = true, rules = false, settings = false)
-                    1 -> {
-                        showTab(copilot = false, rules = true, settings = false)
-                        renderCustomRules()
+    private fun setupHeader() {
+        binding.switchMaster.setOnCheckedChangeListener { _, isChecked ->
+            prefs.isBotEnabled = isChecked
+            updateHeaderStatus()
+            Toast.makeText(this, if (isChecked) "🟢 Bot activado" else "⏸️ Bot pausado", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnQuickSnooze.setOnClickListener {
+            if (prefs.isSnoozed()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Modo Siesta Activo")
+                    .setMessage("El bot está silenciado temporalmente. ¿Deseas reactivarlo ahora?")
+                    .setPositiveButton("Reactivar Bot") { _, _ ->
+                        prefs.clearSnooze()
+                        updateHeaderStatus()
+                        Toast.makeText(this, "🟢 Bot reactivado", Toast.LENGTH_SHORT).show()
                     }
-                    2 -> showTab(copilot = false, rules = false, settings = true)
-                }
+                    .setNegativeButton("Mantener en pausa", null)
+                    .show()
+            } else {
+                val options = arrayOf("Pausar por 1 hora", "Pausar por 2 horas", "Pausar por 4 horas")
+                AlertDialog.Builder(this)
+                    .setTitle("💤 Modo Siesta / No Molestar")
+                    .setItems(options) { _, which ->
+                        val hours = when (which) {
+                            0 -> 1
+                            1 -> 2
+                            else -> 4
+                        }
+                        prefs.setSnoozeHours(hours)
+                        updateHeaderStatus()
+                        Toast.makeText(this, "💤 Bot pausado por $hours hora(s)", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
             }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
+        }
     }
 
-    private fun showTab(copilot: Boolean, rules: Boolean, settings: Boolean) {
+    private fun updateHeaderStatus() {
+        if (!prefs.isBotEnabled) {
+            binding.tvHeaderStatusBadge.text = "🔴 Apagado"
+            binding.tvHeaderStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.error))
+        } else if (prefs.isSnoozed()) {
+            val remainingMins = Math.max(1, ((prefs.snoozeUntil - System.currentTimeMillis()) / 60000).toInt())
+            binding.tvHeaderStatusBadge.text = "💤 Siesta ($remainingMins min)"
+            binding.tvHeaderStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning))
+        } else {
+            binding.tvHeaderStatusBadge.text = "🟢 Activo"
+            binding.tvHeaderStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.primary))
+        }
+    }
+
+    private fun updateHeaderStats() {
+        val count = prefs.getTodayRepliesCount()
+        binding.tvHeaderStats.text = "• $count respuestas hoy"
+    }
+
+    // =========================================================================
+    // 2. BOTTOM NAVIGATION BAR
+    // =========================================================================
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_copilot -> {
+                    showTab(copilot = true, rules = false, tester = false, settings = false)
+                    true
+                }
+                R.id.nav_rules -> {
+                    showTab(copilot = false, rules = true, tester = false, settings = false)
+                    renderCustomRules()
+                    true
+                }
+                R.id.nav_tester -> {
+                    showTab(copilot = false, rules = false, tester = true, settings = false)
+                    true
+                }
+                R.id.nav_settings -> {
+                    showTab(copilot = false, rules = false, tester = false, settings = true)
+                    updateSettingsUIFromPrefs()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun showTab(copilot: Boolean, rules: Boolean, tester: Boolean, settings: Boolean) {
         binding.layoutCopilotTab.visibility = if (copilot) View.VISIBLE else View.GONE
         binding.layoutRulesTab.visibility = if (rules) View.VISIBLE else View.GONE
+        binding.layoutTesterTab.visibility = if (tester) View.VISIBLE else View.GONE
         binding.layoutSettingsTab.visibility = if (settings) View.VISIBLE else View.GONE
     }
 
     // =========================================================================
-    // TAB 1: COPILOTO IA & ESTADO DEL DÍA
+    // 3. TAB 1: COPILOTO IA & ESTADO DEL DÍA
     // =========================================================================
     private fun setupCopilotUI() {
-        // Reset/Clear Status Button
         binding.btnResetStatus.setOnClickListener {
             prefs.clearCurrentStatus()
             updateStatusUI()
-            prefs.addCopilotMessage("copilot", "🧹 Has limpiado tu estado del día. Ahora el bot responderá con su personalidad habitual sin contexto especial.")
+            prefs.addCopilotMessage("copilot", "🧹 Has limpiado tu estado del día. Ahora responderé con tus reglas y personalidad habitual.")
             renderCopilotChat()
             Toast.makeText(this, "Estado del día restablecido", Toast.LENGTH_SHORT).show()
         }
 
-        // Quick Suggestion Chips
         binding.chipStatusPhoto.setOnClickListener {
             insertChipText("Acabo de subir un estado a WhatsApp con una foto de ")
         }
@@ -142,7 +226,6 @@ class MainActivity : AppCompatActivity() {
             insertChipText("Si preguntan por ")
         }
 
-        // Send Button
         binding.btnSendCopilot.setOnClickListener {
             sendCopilotMessage()
         }
@@ -172,18 +255,19 @@ class MainActivity : AppCompatActivity() {
         val history = prefs.getCopilotHistory()
 
         if (history.isEmpty()) {
-            // Initial Welcome Card
             val welcomeCard = MaterialCardView(this).apply {
-                radius = 24f
+                radius = 36f
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
-                setContentPadding(32, 28, 32, 28)
+                setContentPadding(36, 32, 36, 32)
+                strokeColor = ContextCompat.getColor(context, R.color.chip_border)
+                strokeWidth = 2
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(8, 16, 8, 16)
+                    setMargins(12, 16, 12, 16)
                 }
                 layoutParams = lp
 
                 val tv = TextView(context).apply {
-                    text = "👋 ¡Hola Eduardo! Soy tu Copiloto de IA.\n\nCuéntame si subiste una foto a tus estados de WhatsApp, qué andas haciendo hoy o si quieres que responda algo en específico cuando te pregunten.\n\nYo actualizaré tu perfil y prepararé tus respuestas automáticamente."
+                    text = "👋 ¡Hola Eduardo! Soy tu Copiloto de IA.\n\nCuéntame si subiste una foto a tus estados de WhatsApp, qué andas haciendo hoy o qué responder si preguntan cosas puntuales.\n\nYo actualizaré tu perfil y prepararé tus respuestas automáticamente."
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                     textSize = 13f
                     setLineSpacing(6f, 1f)
@@ -194,6 +278,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
         for (msg in history) {
             val isUser = msg.sender == "user"
 
@@ -201,35 +287,46 @@ class MainActivity : AppCompatActivity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = if (isUser) Gravity.END else Gravity.START
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(0, 8, 0, 8)
+                    setMargins(0, 6, 0, 6)
                 }
                 layoutParams = lp
             }
 
-            val card = MaterialCardView(this).apply {
-                radius = 24f
-                cardElevation = 0f
-                setCardBackgroundColor(ContextCompat.getColor(context, if (isUser) R.color.user_bubble else R.color.copilot_bubble))
-                setContentPadding(24, 18, 24, 18)
-
+            val bubble = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 val cardLp = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    if (isUser) setMargins(80, 0, 0, 0) else setMargins(0, 0, 80, 0)
+                    if (isUser) setMargins(70, 0, 0, 0) else setMargins(0, 0, 70, 0)
                 }
                 layoutParams = cardLp
-
-                val tv = TextView(context).apply {
-                    text = if (isUser) msg.text else "🤖 ${msg.text}"
-                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    textSize = 13f
-                    setLineSpacing(4f, 1f)
+                setPadding(26, 18, 26, 16)
+                background = ContextCompat.getDrawable(context, R.drawable.ic_launcher)?.apply {
+                    setTint(ContextCompat.getColor(context, if (isUser) R.color.user_bubble else R.color.copilot_bubble))
                 }
-                addView(tv)
             }
 
-            container.addView(card)
+            // Sender Label & Text
+            val tvText = TextView(this).apply {
+                text = if (isUser) msg.text else "🤖 ${msg.text}"
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                textSize = 13f
+                setLineSpacing(4f, 1f)
+            }
+            bubble.addView(tvText)
+
+            // Timestamp
+            val tvTime = TextView(this).apply {
+                text = timeFormat.format(Date(msg.timestamp))
+                setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                textSize = 9f
+                gravity = if (isUser) Gravity.END else Gravity.START
+                setPadding(0, 6, 0, 0)
+            }
+            bubble.addView(tvTime)
+
+            container.addView(bubble)
             binding.llCopilotMessages.addView(container)
         }
 
@@ -264,7 +361,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
             } catch (e: Exception) {
-                prefs.addCopilotMessage("copilot", "⚠️ Error al conectar con IA: ${e.message}. Guardé tu texto como estado local.")
+                prefs.addCopilotMessage("copilot", "⚠️ Error al procesar con IA: ${e.message}. Guardé tu instrucción localmente.")
                 prefs.currentStatusContext = text
                 updateStatusUI()
             } finally {
@@ -276,32 +373,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================================
-    // TAB 2: REGLAS DINÁMICAS & FAQ ("Si preguntan X -> responder Y")
+    // 4. TAB 2: REGLAS DINÁMICAS & FAQ
     // =========================================================================
     private fun setupRulesUI() {
         binding.btnAddRule.setOnClickListener {
             showAddRuleDialog()
         }
+
+        binding.etSearchRules.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                currentRulesFilter = s?.toString()?.trim() ?: ""
+                renderCustomRules()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun renderCustomRules() {
         binding.llRulesContainer.removeAllViews()
-        val rules = prefs.getCustomRules()
+        val allRules = prefs.getCustomRules()
 
-        if (rules.isEmpty()) {
+        val activeCount = allRules.count { it.enabled }
+        binding.tvRulesCounter.text = "$activeCount de ${allRules.size} reglas activadas"
+
+        val filteredRules = if (currentRulesFilter.isBlank()) {
+            allRules
+        } else {
+            allRules.filter {
+                it.trigger.contains(currentRulesFilter, ignoreCase = true) ||
+                        it.response.contains(currentRulesFilter, ignoreCase = true)
+            }
+        }
+
+        if (filteredRules.isEmpty()) {
             binding.tvEmptyRules.visibility = View.VISIBLE
+            binding.tvEmptyRules.text = if (currentRulesFilter.isBlank()) {
+                "Aún no tienes reglas fijas creadas.\n\nPuedes pulsar el botón '+ Regla'\no simplemente decírselo al Copiloto en el chat:\n(ej: 'Si preguntan por la moto vale 5 millones')."
+            } else {
+                "No se encontraron reglas que coincidan con \"$currentRulesFilter\"."
+            }
             return
         }
 
         binding.tvEmptyRules.visibility = View.GONE
 
-        for (rule in rules) {
+        for (rule in filteredRules) {
             val card = MaterialCardView(this).apply {
-                radius = 24f
+                radius = 32f
                 cardElevation = 2f
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_bg))
+                strokeColor = ContextCompat.getColor(context, R.color.chip_border)
+                strokeWidth = 1
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(0, 0, 0, 16)
+                    setMargins(0, 0, 0, 14)
                 }
                 layoutParams = lp
 
@@ -330,6 +455,7 @@ class MainActivity : AppCompatActivity() {
                     isChecked = rule.enabled
                     setOnCheckedChangeListener { _, isChecked ->
                         prefs.toggleCustomRule(rule.id, isChecked)
+                        binding.tvRulesCounter.text = "${prefs.getCustomRules().count { it.enabled }} de ${prefs.getCustomRules().size} reglas activadas"
                     }
                 }
                 topRow.addView(sw)
@@ -422,14 +548,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================================
-    // TAB 3: AJUSTES & CONSOLA EN VIVO
+    // 5. TAB 3: SIMULADOR DE RESPUESTAS EN VIVO
     // =========================================================================
-    private fun setupSettingsUI() {
-        binding.switchMaster.setOnCheckedChangeListener { _, isChecked ->
-            prefs.isBotEnabled = isChecked
-            Toast.makeText(this, if (isChecked) "Bot activado" else "Bot pausado", Toast.LENGTH_SHORT).show()
+    private fun setupTesterUI() {
+        binding.chipSampleStory.setOnClickListener {
+            binding.etTestMessage.setText("Uff qué delicia hermano, ¿dónde es eso? 🔥")
+        }
+        binding.chipSampleVoiceNote.setOnClickListener {
+            binding.etTestMessage.setText("🎤 Nota de voz (0:15)")
+        }
+        binding.chipSampleQuestion.setOnClickListener {
+            binding.etTestMessage.setText("¿Qué haces hoy bro, estás libre o qué?")
         }
 
+        binding.btnRunSimulation.setOnClickListener {
+            runSimulation()
+        }
+    }
+
+    private fun runSimulation() {
+        val contact = binding.etTestContact.text.toString().trim().ifBlank { "Carlos" }
+        val msg = binding.etTestMessage.text.toString().trim()
+
+        if (msg.isBlank()) {
+            Toast.makeText(this, "Escribe un mensaje de prueba primero", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        binding.pbSimulationLoading.visibility = View.VISIBLE
+        binding.btnRunSimulation.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    geminiManager.simulateBotReply(contact, msg, scheduleManager, ruleEngine)
+                }
+
+                binding.cardSimulationResult.visibility = View.VISIBLE
+                binding.tvSimSourceBadge.text = result.source
+                binding.tvSimIncomingText.text = "$contact:\n$msg"
+                binding.tvSimOutgoingText.text = "Eduardo (Bot):\n${result.reply}"
+
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error en simulador: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                binding.pbSimulationLoading.visibility = View.GONE
+                binding.btnRunSimulation.isEnabled = true
+            }
+        }
+    }
+
+    // =========================================================================
+    // 6. TAB 4: AJUSTES & CONSOLA EN VIVO
+    // =========================================================================
+    private fun setupSettingsUI() {
         binding.btnGrantPermission.setOnClickListener {
             val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             startActivity(intent)
@@ -451,10 +623,109 @@ class MainActivity : AppCompatActivity() {
             }, prefs.endHour, prefs.endMinute, false).show()
         }
 
+        // Manual Pause selector buttons
+        binding.btnPause1m.setOnClickListener { setManualPauseMinutes(1) }
+        binding.btnPause5m.setOnClickListener { setManualPauseMinutes(5) }
+        binding.btnPause15m.setOnClickListener { setManualPauseMinutes(15) }
+
+        // Ignored Contacts manager
+        binding.btnManageIgnored.setOnClickListener {
+            showManageIgnoredDialog()
+        }
+
+        // Clear Logs
+        binding.btnClearLogs.setOnClickListener {
+            binding.tvLogs.text = "Esperando mensajes entrantes en WhatsApp..."
+            Toast.makeText(this, "Consola limpiada", Toast.LENGTH_SHORT).show()
+        }
+
         binding.btnSave.setOnClickListener {
             savePreferences()
-            Toast.makeText(this, "✅ Configuración guardada con éxito", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ Ajustes guardados con éxito", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun setManualPauseMinutes(mins: Int) {
+        prefs.manualPauseMinutes = mins
+        updateManualPauseButtons()
+        Toast.makeText(this, "Pausa manual fijada en $mins minuto(s)", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateManualPauseButtons() {
+        val current = prefs.manualPauseMinutes
+        stylePauseButton(binding.btnPause1m, current == 1)
+        stylePauseButton(binding.btnPause5m, current == 5)
+        stylePauseButton(binding.btnPause15m, current == 15)
+    }
+
+    private fun stylePauseButton(button: MaterialButton, isSelected: Boolean) {
+        if (isSelected) {
+            button.setBackgroundColor(ContextCompat.getColor(this, R.color.primary))
+            button.setTextColor(ContextCompat.getColor(this, R.color.background))
+        } else {
+            button.setBackgroundColor(ContextCompat.getColor(this, R.color.card_bg))
+            button.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+        }
+    }
+
+    private fun updateIgnoredContactsText() {
+        val list = prefs.getIgnoredContacts()
+        if (list.isEmpty()) {
+            binding.tvIgnoredContactsList.text = "(Ningún contacto ignorado configurado)"
+            binding.tvIgnoredContactsList.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+        } else {
+            binding.tvIgnoredContactsList.text = list.joinToString(", ")
+            binding.tvIgnoredContactsList.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+        }
+    }
+
+    private fun showManageIgnoredDialog() {
+        val list = prefs.getIgnoredContacts()
+        val items = list.toTypedArray()
+
+        val builder = AlertDialog.Builder(this)
+            .setTitle("🚫 Contactos Ignorados")
+
+        if (items.isEmpty()) {
+            builder.setMessage("No tienes contactos en la lista de excepciones.\n\nEl bot responderá a todos los chats individuales.")
+        } else {
+            builder.setItems(items) { _, which ->
+                val selected = items[which]
+                AlertDialog.Builder(this)
+                    .setTitle("Eliminar Excepción")
+                    .setMessage("¿Deseas quitar a \"$selected\" de los contactos ignorados?")
+                    .setPositiveButton("Quitar") { _, _ ->
+                        prefs.removeIgnoredContact(selected)
+                        updateIgnoredContactsText()
+                        Toast.makeText(this, "Contacto eliminado de excepciones", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+        }
+
+        builder.setPositiveButton("+ Agregar Contacto") { _, _ ->
+            val input = EditText(this).apply {
+                hint = "Nombre exacto o palabra (ej: Mamá, Jefe)"
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            }
+            AlertDialog.Builder(this)
+                .setTitle("Agregar Contacto Ignorado")
+                .setMessage("Escribe el nombre o palabra clave para no responderle nunca:")
+                .setView(input)
+                .setPositiveButton("Agregar") { _, _ ->
+                    val name = input.text.toString().trim()
+                    if (name.isNotBlank()) {
+                        prefs.addIgnoredContact(name)
+                        updateIgnoredContactsText()
+                        Toast.makeText(this, "✅ $name agregado a excepciones", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
+        builder.setNeutralButton("Cerrar", null)
+        builder.show()
     }
 
     private fun updateTimeButtons() {
@@ -470,7 +741,16 @@ class MainActivity : AppCompatActivity() {
         binding.etApiKey.setText(prefs.geminiApiKey)
         binding.etSystemPrompt.setText(prefs.systemPrompt)
 
+        binding.switchVoiceNote.isChecked = prefs.autoReplyToVoiceNotes
+        binding.etVoiceNoteMsg.setText(prefs.voiceNoteMessage)
+
         updateTimeButtons()
+        updateManualPauseButtons()
+        updateIgnoredContactsText()
+    }
+
+    private fun updateSettingsUIFromPrefs() {
+        loadPreferences()
     }
 
     private fun savePreferences() {
@@ -480,5 +760,10 @@ class MainActivity : AppCompatActivity() {
         prefs.outOfOfficeMessage = binding.etOutOfOfficeMsg.text.toString()
         prefs.geminiApiKey = binding.etApiKey.text.toString().trim()
         prefs.systemPrompt = binding.etSystemPrompt.text.toString().trim()
+
+        prefs.autoReplyToVoiceNotes = binding.switchVoiceNote.isChecked
+        prefs.voiceNoteMessage = binding.etVoiceNoteMsg.text.toString().trim()
+
+        updateHeaderStatus()
     }
 }
